@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 
 use crate::bindgen::cdecl;
@@ -132,10 +132,13 @@ impl Function {
         &mut self,
         config: &Config,
         transparent_types: &TransparentTypes,
+        visited_paths: &mut HashSet<GenericPath>,
     ) {
-        self.ret.simplify_standard_types(config, transparent_types);
+        self.ret
+            .simplify_standard_types(config, transparent_types, visited_paths);
         for arg in &mut self.args {
-            arg.ty.simplify_standard_types(config, transparent_types);
+            arg.ty
+                .simplify_standard_types(config, transparent_types, visited_paths);
         }
     }
 

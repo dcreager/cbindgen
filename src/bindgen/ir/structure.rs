@@ -2,14 +2,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use std::collections::HashSet;
 use std::io::Write;
 
 use crate::bindgen::config::{Config, Language, LayoutConfig};
 use crate::bindgen::declarationtyperesolver::DeclarationTypeResolver;
 use crate::bindgen::dependencies::Dependencies;
 use crate::bindgen::ir::{
-    AnnotationSet, Cfg, ConditionWrite, Constant, Documentation, Field, GenericParams, Item,
-    ItemContainer, Path, Repr, ReprAlign, ReprStyle, ToCondition, Type, Typedef,
+    AnnotationSet, Cfg, ConditionWrite, Constant, Documentation, Field, GenericParams, GenericPath,
+    Item, ItemContainer, Path, Repr, ReprAlign, ReprStyle, ToCondition, Type, Typedef,
 };
 use crate::bindgen::library::Library;
 use crate::bindgen::mangle;
@@ -147,9 +148,12 @@ impl Struct {
         &mut self,
         config: &Config,
         transparent_types: &TransparentTypes,
+        visited_paths: &mut HashSet<GenericPath>,
     ) {
         for field in &mut self.fields {
-            field.ty.simplify_standard_types(config, transparent_types);
+            field
+                .ty
+                .simplify_standard_types(config, transparent_types, visited_paths);
         }
     }
 

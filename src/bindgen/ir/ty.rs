@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::io::Write;
 
 use crate::bindgen::cdecl;
@@ -640,11 +641,18 @@ impl Type {
         &self,
         config: &Config,
         transparent_types: &TransparentTypes,
+        visited_paths: &mut HashSet<GenericPath>,
     ) -> Option<Self> {
         let path = match *self {
             Type::Path { ref path, .. } => path,
             _ => return None,
         };
+
+        eprintln!("===> {} {:?}", visited_paths.len(), path);
+        if visited_paths.contains(path) {
+            return None;
+        }
+        visited_paths.insert(path.clone());
 
         if path.generics().is_empty() {
             let primitive = self.nonzero_to_primitive();
@@ -659,15 +667,17 @@ impl Type {
         if let Some(transparent) = transparent_types.is_transparent(self) {
             // Make sure to do another round of simplifying each time we follow a typedef or
             // transparent struct link.
-            let mut current = match transparent.simplified_type(config, transparent_types) {
-                Some(current) => current,
-                None => transparent,
-            };
-            while let Some(transparent) = transparent_types.is_transparent(&current) {
-                current = match transparent.simplified_type(config, transparent_types) {
+            let mut current =
+                match transparent.simplified_type(config, transparent_types, visited_paths) {
                     Some(current) => current,
                     None => transparent,
                 };
+            while let Some(transparent) = transparent_types.is_transparent(&current) {
+                current =
+                    match transparent.simplified_type(config, transparent_types, visited_paths) {
+                        Some(current) => current,
+                        None => transparent,
+                    };
             }
             return Some(Type::Path {
                 path: path.clone(),
@@ -681,10 +691,11 @@ impl Type {
         }
 
         let unsimplified_generic = &path.generics()[0];
-        let generic = match unsimplified_generic.simplified_type(config, transparent_types) {
-            Some(generic) => Cow::Owned(generic),
-            None => Cow::Borrowed(unsimplified_generic),
-        };
+        let generic =
+            match unsimplified_generic.simplified_type(config, transparent_types, visited_paths) {
+                Some(generic) => Cow::Owned(generic),
+                None => Cow::Borrowed(unsimplified_generic),
+            };
         match path.name() {
             "Option" => {
                 if let Some(nullable) = generic.make_nullable() {
@@ -719,9 +730,10 @@ impl Type {
         &mut self,
         config: &Config,
         transparent_types: &TransparentTypes,
+        visited_paths: &mut HashSet<GenericPath>,
     ) {
-        self.visit_types(|ty| ty.simplify_standard_types(config, transparent_types));
-        if let Some(ty) = self.simplified_type(config, transparent_types) {
+        self.visit_types(|ty| ty.simplify_standard_types(config, transparent_types, visited_paths));
+        if let Some(ty) = self.simplified_type(config, transparent_types, visited_paths) {
             *self = ty;
         }
     }

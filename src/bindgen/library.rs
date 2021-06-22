@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::bindgen::bindings::Bindings;
 use crate::bindgen::config::{Config, Language, SortKey};
@@ -362,21 +362,22 @@ impl Library {
         let mut transparent_types = TransparentTypes::default();
         transparent_types.add_structs(&self.structs);
         transparent_types.add_typedefs(&self.typedefs);
+        let mut visited_paths = HashSet::default();
 
         self.structs.for_all_items_mut(|x| {
-            x.simplify_standard_types(config, &transparent_types);
+            x.simplify_standard_types(config, &transparent_types, &mut visited_paths);
         });
         self.unions.for_all_items_mut(|x| {
-            x.simplify_standard_types(config, &transparent_types);
+            x.simplify_standard_types(config, &transparent_types, &mut visited_paths);
         });
         self.globals.for_all_items_mut(|x| {
-            x.simplify_standard_types(config, &transparent_types);
+            x.simplify_standard_types(config, &transparent_types, &mut visited_paths);
         });
         self.typedefs.for_all_items_mut(|x| {
-            x.simplify_standard_types(config, &transparent_types);
+            x.simplify_standard_types(config, &transparent_types, &mut visited_paths);
         });
         for x in &mut self.functions {
-            x.simplify_standard_types(config, &transparent_types);
+            x.simplify_standard_types(config, &transparent_types, &mut visited_paths);
         }
     }
 

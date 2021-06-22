@@ -2,15 +2,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 
 use crate::bindgen::config::{Config, Language};
 use crate::bindgen::declarationtyperesolver::DeclarationTypeResolver;
 use crate::bindgen::dependencies::Dependencies;
 use crate::bindgen::ir::{
-    AnnotationSet, Cfg, ConditionWrite, Documentation, Field, GenericParams, Item, ItemContainer,
-    Path, ToCondition, Type,
+    AnnotationSet, Cfg, ConditionWrite, Documentation, Field, GenericParams, GenericPath, Item,
+    ItemContainer, Path, ToCondition, Type,
 };
 use crate::bindgen::library::Library;
 use crate::bindgen::mangle;
@@ -71,9 +71,10 @@ impl Typedef {
         &mut self,
         config: &Config,
         transparent_types: &TransparentTypes,
+        visited_paths: &mut HashSet<GenericPath>,
     ) {
         self.aliased
-            .simplify_standard_types(config, transparent_types);
+            .simplify_standard_types(config, transparent_types, visited_paths);
     }
 
     pub fn transfer_annotations(&mut self, out: &mut HashMap<Path, AnnotationSet>) {
